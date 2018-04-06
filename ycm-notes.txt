@@ -81,3 +81,13 @@ Paul to import the public key from John’s certificate file into Paul’s own k
 •	Note that the alias here is used by Paul and it does not have to be the same as the alias used by John
 
 Now Paul has John’s public key stored in Paul’s keystore file
+
+===== Previous Notes on Java TrustStore =====
+Very Useful Article on Installing Server SSL Cert on the Client Side
+(Make sure we are installing the cert to the right java installation)
+https://confluence.atlassian.com/kb/connecting-to-ssl-services-802171215.html
+
+After Installing the Cert, Use the attached SSLPoke java class to test.
+Before testing, make sure we get the right java version, use java –version to verify which java installation is active
+java SSLPoke jira.uk.standardchartered.com 8443
+
