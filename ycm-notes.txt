@@ -1,0 +1,83 @@
+Java Keystore TrustStore and Certificates
+
+
+===== HOW TO INSERT JIRA CERT TO SERVER ====
+
+Step 0
+Log in to the linux server, e.g. for CICD Mother Box 10.198.36.133, log in as devops + rock$star
+When necessary, “sudo su Jenkins” to become a super user “Jenkins”
+
+Step 1
+cd /opt/softwareag/inst1/apps/jdk1.8.0_45/jre/lib/security
+Stay in this directory. This is also where we will keep jira_public.crt, cacerts_original, cacerts_with_jira_verified and SSLPoke.class files
+
+Step 2
+java -Djavax.net.ssl.trustStore=cacerts SSLPoke jira.global.standardchartered.com 443
+java -Djavax.net.ssl.trustStore=cacerts SSLPoke bitbucket.global.standardchartered.com 443
+If this returns “Successfully connected” that means the default cacerts in this directory works. Otherwise perform the following steps to fix it
+
+Step 3
+Backup the original cacerts to cacerts_original
+
+Step 4
+openssl s_client -connect jira.global.standardchartered.com:443
+Find the section which starts with -----BEGIN CERTIFICATE----- and ends with -----BEGIN CERTIFICATE-----
+Copy this section including these two lines, save it to jira_public.crt
+
+Step 5
+Double confirm that we have backup the original the cacerts file before proceeding
+keytool -import -alias jirascb -file jira_public.crt -keystore cacerts
+/opt/app/java/jdk1.8.0_121/jre/bin/keytool -import -alias bitbucket -file bitbucket_public.crt -keystore cacerts
+This command import the public key information of the jira server into the cacerts keystore file and give it an alias name “jirascb”
+When prompted for the keystore password, the default password is ‘changeit’
+
+Step 6
+Run step 2 again to verify that the certificate is added and it works
+
+
+
+
+===== REFERENCE SECTION =====
+
+Source: http://alvinalexander.com/java/java-using-keytool-certificate-file-create
+Some other sources not read yet: (may or may not be useful)
+https://www.javacodegeeks.com/2014/07/java-keystore-tutorial.html
+https://www.digitalocean.com/community/tutorials/java-keytool-essentials-working-with-java-keystores
+
+
+Assume John want to share his public key with Paul
+
+John to create the private key
+•	keytool -genkey -alias KeyForPaul -keystore JohnsPrivateKey.store
+o	If more options are preferred, keytool -genkey -alias myalias -keyalg RSA -validity 365 -keystore keys/my.keystore
+•	It means generate a new private key and assign it an alias “KeyForPaul”, and store this information in JohnsPrivateKey.store
+•	JohnsPrivateKey.store ia a file that contains a set of private keys of John
+•	Need to supply John’s keystore password in the keygen process
+•	Need to supply John’s key password for this particular key “KeyForPaul”. Both keys are very important
+
+John to view information about a keystore
+•	keytool -list -v -keystore MyPrivateKey.store
+
+(FYI) To generate a certification signing request
+•	keytool -certreq -keystore MyPrivateKey.store -alias myalias -file whatever.pem
+o	Taken from some other page: keytool -certreq -keystore keystore.jks -alias myalias -file whatever.csr
+•	The generated pem file can be submitted to the CA for signing, so that it won’t stay as self-signed.
+
+(FYI) To remove any alias from the keystore
+•	keytool -keystore MyPrivateKey.store -delete -alias myalias
+
+John to export a intermediate certificate file (.cer) from his private keystore
+•	keytool -export -alias KeyForPaul -file certfile.cer -keystore JohnsPrivateKey.store
+•	It means look for the alias named “KeyForPaul” in the keystore file “JohnsPrivateKey.store” and export the public key to certfile.cer
+•	Need to supply John’s keystore password in the export process
+
+John to send this certificate file to Paul securely
+Paul securely received John’s certificate file
+
+Paul to import the public key from John’s certificate file into Paul’s own keystore (assumed named MyPublicKey.store)
+•	keytool -import -alias PublicKeyFromJohn -file certfile.cer -keystore MyPublicKey.store
+•	It means look for an alias named “PublicKeyFromJohn” in certfile.cer and import the information found into the keystore named “MyPublicKey.store” (create the keystore if it does not exist)
+•	Need to supply Paul’s public keystore password in the import process
+•	Note that the alias here is used by Paul and it does not have to be the same as the alias used by John
+
+Now Paul has John’s public key stored in Paul’s keystore file
